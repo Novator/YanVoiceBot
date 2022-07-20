@@ -24,9 +24,17 @@ $bot_files_dir = File.join($bot_app_dir, 'files')
 $bot_log_file = File.join($bot_files_dir, 'yanvoicebot.log')
 # Telegram bot token file
 $bot_token_file = File.join($bot_app_dir, 'token.txt')
+# Yandex IAM token file
+$bot_yan_iam_file = File.join($bot_app_dir, 'yan_iam.txt')
+# Yandex Folder ID
+$bot_yan_folder_file = File.join($bot_app_dir, 'yan_folder.txt')
 
 #token = '54??????43:AA?????????????HZkRvUE?????????nvI8'
 token = IO.read($bot_token_file).strip
+#IAM_TOKEN = 't1.9eu??????????????????????????????????????wyBg'
+IAM_TOKEN = IO.read($bot_yan_iam_file).strip
+#FOLDER_ID = 'b1g??????????8j'
+FOLDER_ID = IO.read($bot_yan_folder_file).strip
 
 
 $log_file = nil
@@ -120,6 +128,57 @@ def get_http_response(url, limit = 10)
   res
 end
 
+# Send POST and recieve HTTP/HTTPS response object
+# RU: Послать POST и получить объект ответа HTTP/HTTPS
+def post_http_response(url, params=nil, headers=nil, data=nil, limit=10)
+  res = nil
+  raise(ArgumentError, 'Post HTTP redirect too deep ('+limit.to_s+')') if limit<=0
+  url_params = ''
+  params.each do |n,v|
+    if url_params.size==0
+      url_params += '?'
+    else
+      url_params += '&'
+    end
+    url_params += n+'='+v.to_s
+  end
+  url = $uri_parser.escape(url+url_params)
+  url = fix_url(url)
+  uri = URI.parse(url)
+  http = Net::HTTP.new(uri.host, uri.port)
+  if uri.scheme == 'https'
+    http.use_ssl = true
+    http.verify_mode = OpenSSL::SSL::VERIFY_PEER
+    http.ssl_version = :SSLv23
+  end
+  req = Net::HTTP::Post.new(uri.request_uri, headers)
+  response = http.request(req, data)
+  case response
+    when Net::HTTPSuccess
+      res = response
+    when Net::HTTPRedirection
+      new_link = response['location']
+      new_link = $uri_parser.unescape(new_link)
+      puts('Redirect: '+new_link)
+      res = post_http_response(url, params, headers, data, limit - 1) if $processing
+    else
+      res = response.error!
+  end
+end
+
+YandexHeaders = {'Transfer-Encoding' => 'chunked', 'Authorization' => 'Bearer '+IAM_TOKEN}
+YandexParams = {'topic'=>'general', 'folderId'=>FOLDER_ID, 'lang'=>'ru-RU'}
+YandexSpeechUrl = 'https://stt.api.cloud.yandex.net/speech/v1/stt:recognize'
+
+# Recognize voice data by Yandex Speech Kit service
+# RU: Распознать голосовые данные посредством сервиса Yandex Speech Kit
+def recognize_voice_by_yandex_speech(ogg_data)
+  res = nil
+  https_res = post_http_response(YandexSpeechUrl, YandexParams, YandexHeaders, ogg_data)
+  res = JSON.parse(https_res.body)['result'] if https_res
+  res
+end
+
 # Start telegram thread
 telegram_thread = Thread.new do
   prev_err_mes = nil
@@ -158,9 +217,14 @@ telegram_thread = Thread.new do
                         full_file_name = File.join($bot_files_dir, file_path.gsub('/', '_'))
                         #p full_file_name
                         File.open(full_file_name, 'wb') do |file|
-                          file.write(http_response.body)
+                          #file.write(http_response.body)
+                          #bot.api.send_message(chat_id: chat_id, text: \
+                          #  'Audio is saved! (Yandex Speech will be connected later)')
+                          #ogg_data = File.open('./files/voice_file_9.oga', 'rb') { |f| f.read }
+                          ogg_data = http_response.body
+                          txt_res = recognize_voice_by_yandex_speech(ogg_data)
                           bot.api.send_message(chat_id: chat_id, text: \
-                            'Audio is saved! (Yandex Speech will be connected later)')
+                            'You said: "'+txt_res+'"')
                         end
                       else
                         bot.api.send_message(chat_id: chat_id, text: \
