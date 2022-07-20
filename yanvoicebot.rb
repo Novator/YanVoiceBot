@@ -208,27 +208,26 @@ telegram_thread = Thread.new do
                     res = bot.api.getFile(file_id: voice.file_id)
                     if res and res['ok']
                       afile = res['result']
-                      #p afile
                       file_path = afile['file_path']
                       url = 'https://api.telegram.org/file/bot'+token+'/'+file_path
-                      #p url
                       http_response = get_http_response(url)
                       if http_response and http_response.body
-                        full_file_name = File.join($bot_files_dir, file_path.gsub('/', '_'))
-                        #p full_file_name
-                        File.open(full_file_name, 'wb') do |file|
-                          #file.write(http_response.body)
-                          #bot.api.send_message(chat_id: chat_id, text: \
-                          #  'Audio is saved! (Yandex Speech will be connected later)')
-                          #ogg_data = File.open('./files/voice_file_9.oga', 'rb') { |f| f.read }
-                          ogg_data = http_response.body
-                          txt_res = recognize_voice_by_yandex_speech(ogg_data)
+                        ogg_data = http_response.body
+                        txt_res = recognize_voice_by_yandex_speech(ogg_data)
+                        if txt_res
                           bot.api.send_message(chat_id: chat_id, text: \
                             'You said: "'+txt_res+'"')
+                        else
+                          full_file_name = File.join($bot_files_dir, file_path.gsub('/', '_'))
+                          File.open(full_file_name, 'wb') do |file|
+                            file.write(http_response.body)
+                            bot.api.send_message(chat_id: chat_id, text: \
+                              'Yandex Speech failed. Audio is saved.')
+                          end
                         end
                       else
                         bot.api.send_message(chat_id: chat_id, text: \
-                          'Cannot download audio with HTTPS')
+                          'Bot cannot download speech from Telegram HTTPS ['+file_path+']')
                       end
                     else
                       bot.api.send_message(chat_id: chat_id, text: \
