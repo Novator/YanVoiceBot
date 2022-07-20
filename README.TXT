@@ -3,12 +3,12 @@
 
 To use bot you need:
 1) Install Ruby
-2) Install telegram-bot-ruby:
+2) Install "telegram-bot-ruby" gem:
 
   gem install telegram-bot-ruby
 
-3) Register your bot in telegram via @BotFather
-4) Write your teleram bot token to file "token.txt"
+3) Register your bot in Telegram via @BotFather
+4) Write your Telegram bot token to file "token.txt"
 5) Register on Yandex Cloud and activate catalog
 6) Get IAM-token (https://cloud.yandex.ru/docs/iam/operations/iam-token/create)
 and write it to file "yan_iam.txt"
