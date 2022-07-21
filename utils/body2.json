@@ -1,0 +1,13 @@
+{
+"accessBindingDeltas": [{
+    "action": "ADD",
+    "accessBinding": {
+        "roleId": "viewer",
+        "subject": {
+            "id": "allAuthenticatedUsers",
+            "type": "system"
+            }
+        }
+    }]
+}
+

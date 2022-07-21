@@ -99,31 +99,33 @@ end
 
 # Get HTTP/HTTPS response object
 # RU: Взять объект ответа HTTP/HTTPS
-def get_http_response(url, limit = 10)
+def get_http_response(url, limit=10)
   res = nil
-  raise(ArgumentError, 'HTTP redirect too deep ('+limit.to_s+')') if limit<=0
-  url = $uri_parser.escape(url)  #unless url.ascii_only?
-  uri = URI.parse(fix_url(url))
-  options_mask = OpenSSL::SSL::OP_NO_SSLv2 + OpenSSL::SSL::OP_NO_SSLv3 +
-    OpenSSL::SSL::OP_NO_COMPRESSION
-  http = Net::HTTP.new(uri.host, uri.port)
-  req = Net::HTTP::Get.new(uri.request_uri)
-  if uri.scheme == 'https'
-    http.use_ssl = true
-    http.verify_mode = OpenSSL::SSL::VERIFY_PEER
-    http.ssl_version = :SSLv23
-  end
-  response = http.request(req)
-  case response
-    when Net::HTTPSuccess
-      res = response
-    when Net::HTTPRedirection
-      new_link = response['location']
-      new_link = $uri_parser.unescape(new_link)
-      puts('Redirect: '+new_link)
-      res = get_http_response(new_link, limit - 1) if $processing
-    else
-      res = response.error!
+  begin
+    raise(ArgumentError, 'HTTP redirect too deep ('+limit.to_s+')') if limit<=0
+    url = $uri_parser.escape(url)  #unless url.ascii_only?
+    uri = URI.parse(fix_url(url))
+    http = Net::HTTP.new(uri.host, uri.port)
+    req = Net::HTTP::Get.new(uri.request_uri)
+    if uri.scheme == 'https'
+      http.use_ssl = true
+      http.verify_mode = OpenSSL::SSL::VERIFY_PEER
+      http.ssl_version = :SSLv23
+    end
+    response = http.request(req)
+    case response
+      when Net::HTTPSuccess
+        res = response
+      when Net::HTTPRedirection
+        new_link = response['location']
+        new_link = $uri_parser.unescape(new_link)
+        puts('Redirect: '+new_link)
+        res = get_http_response(new_link, limit - 1) if $processing
+      else
+        response.error!
+    end
+  rescue => err
+    log_message(LM_Error, 'GET HTTP(S): '+err.message)
   end
   res
 end
@@ -132,38 +134,43 @@ end
 # RU: Послать POST и получить объект ответа HTTP/HTTPS
 def post_http_response(url, params=nil, headers=nil, data=nil, limit=10)
   res = nil
-  raise(ArgumentError, 'Post HTTP redirect too deep ('+limit.to_s+')') if limit<=0
-  url_params = ''
-  params.each do |n,v|
-    if url_params.size==0
-      url_params += '?'
-    else
-      url_params += '&'
+  begin
+    raise(ArgumentError, 'Post HTTP redirect too deep ('+limit.to_s+')') if limit<=0
+    url_params = ''
+    params.each do |n,v|
+      if url_params.size==0
+        url_params += '?'
+      else
+        url_params += '&'
+      end
+      url_params += n+'='+v.to_s
     end
-    url_params += n+'='+v.to_s
+    url = $uri_parser.escape(url+url_params)
+    url = fix_url(url)
+    uri = URI.parse(url)
+    http = Net::HTTP.new(uri.host, uri.port)
+    if uri.scheme == 'https'
+      http.use_ssl = true
+      http.verify_mode = OpenSSL::SSL::VERIFY_PEER
+      http.ssl_version = :SSLv23
+    end
+    req = Net::HTTP::Post.new(uri.request_uri, headers)
+    response = http.request(req, data)
+    case response
+      when Net::HTTPSuccess
+        res = response
+      when Net::HTTPRedirection
+        new_link = response['location']
+        new_link = $uri_parser.unescape(new_link)
+        puts('Redirect: '+new_link)
+        res = post_http_response(url, params, headers, data, limit - 1) if $processing
+      else
+        response.error!
+    end
+  rescue => err
+    log_message(LM_Error, 'POST HTTP(S): '+err.message)
   end
-  url = $uri_parser.escape(url+url_params)
-  url = fix_url(url)
-  uri = URI.parse(url)
-  http = Net::HTTP.new(uri.host, uri.port)
-  if uri.scheme == 'https'
-    http.use_ssl = true
-    http.verify_mode = OpenSSL::SSL::VERIFY_PEER
-    http.ssl_version = :SSLv23
-  end
-  req = Net::HTTP::Post.new(uri.request_uri, headers)
-  response = http.request(req, data)
-  case response
-    when Net::HTTPSuccess
-      res = response
-    when Net::HTTPRedirection
-      new_link = response['location']
-      new_link = $uri_parser.unescape(new_link)
-      puts('Redirect: '+new_link)
-      res = post_http_response(url, params, headers, data, limit - 1) if $processing
-    else
-      res = response.error!
-  end
+  res
 end
 
 YandexHeaders = {'Transfer-Encoding' => 'chunked', 'Authorization' => 'Bearer '+IAM_TOKEN}
@@ -230,7 +237,7 @@ telegram_thread = Thread.new do
                             file.write(http_response.body)
                             bot.api.send_message(chat_id: chat_id, text: \
                               'Yandex Speech failed. Audio is saved.')
-                            log_message(LM_Trace, 'Audio is saved: '+file_path)
+                            log_message(LM_Info, 'Audio is saved: '+file_path)
                           end
                         end
                       else

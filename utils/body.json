@@ -1,0 +1,13 @@
+{
+    "accessBindingDeltas": [{
+        "action": "ADD",
+        "accessBinding": {
+            "roleId": "editor",
+            "subject": {
+                "id": "gfei8n54hmfhuk5nogse",
+                "type": "userAccount"
+                }
+            }
+        }
+    ]
+}
