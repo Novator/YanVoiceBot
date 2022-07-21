@@ -196,9 +196,15 @@ telegram_thread = Thread.new do
               last_name = message.from.last_name
               nick = message.from.username
               mes = message.text
-              voice = nil
-              if message.voice
-                voice = message.voice
+              voice = message.voice
+              log_info = 'Message: user_id=' + user_id.to_s + '('
+              log_info << first_name if first_name
+              log_info << ' '+last_name if last_name
+              log_info << ' @'+nick if nick
+              log_info << ')'
+              log_info << ' voice: '+voice.inspect if voice
+              log_message(LM_Trace, log_info+' ['+mes.to_s+']')
+              if voice
                 if (voice.duration>0) and (voice.duration<=30)
                   if voice.mime_type=='audio/ogg'
                     #p ['***VOICE*** [voice, duration, file_id, file_unique_id, file_size]=', \
@@ -217,12 +223,14 @@ telegram_thread = Thread.new do
                         if txt_res
                           bot.api.send_message(chat_id: chat_id, text: \
                             'You said: "'+txt_res+'"')
+                          log_message(LM_Trace, 'User said: "'+txt_res+'"')
                         else
                           full_file_name = File.join($bot_files_dir, file_path.gsub('/', '_'))
                           File.open(full_file_name, 'wb') do |file|
                             file.write(http_response.body)
                             bot.api.send_message(chat_id: chat_id, text: \
                               'Yandex Speech failed. Audio is saved.')
+                            log_message(LM_Trace, 'Audio is saved: '+file_path)
                           end
                         end
                       else
@@ -254,12 +262,6 @@ telegram_thread = Thread.new do
                     comm = mes
                   end
                 end
-                user = 'Message: user_id=' + user_id.to_s + '('
-                user << first_name if first_name
-                user << ' '+last_name if last_name
-                user << ' @'+nick if nick
-                user << ')'
-                log_message(LM_Trace, user+' ['+mes+']')
                 case comm
                   when '/about'
                     bot.api.send_message(chat_id: chat_id, text: 'The demo bot is designed for voice recognition by Yandex Speech')
