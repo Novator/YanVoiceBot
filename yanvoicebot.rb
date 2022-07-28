@@ -23,14 +23,14 @@ $bot_files_dir = File.join($bot_app_dir, 'files')
 # Log file
 $bot_log_file = File.join($bot_files_dir, 'yanvoicebot.log')
 # Telegram bot token file
-$bot_token_file = File.join($bot_app_dir, 'token.txt')
+$bot_tel_token_file = File.join($bot_app_dir, 'token.txt')
 # Yandex IAM token file
 $bot_yan_iam_file = File.join($bot_app_dir, 'yan_iam.txt')
 # Yandex Folder ID
 $bot_yan_folder_file = File.join($bot_app_dir, 'yan_folder.txt')
 
-#token = '54??????43:AA?????????????HZkRvUE?????????nvI8'
-token = IO.read($bot_token_file).strip
+#TEL_TOKEN = '54??????43:AA?????????????HZkRvUE?????????nvI8'
+TEL_TOKEN = IO.read($bot_tel_token_file).strip
 #IAM_TOKEN = 't1.9eu??????????????????????????????????????wyBg'
 IAM_TOKEN = IO.read($bot_yan_iam_file).strip
 #FOLDER_ID = 'b1g??????????8j'
@@ -192,7 +192,7 @@ telegram_thread = Thread.new do
   puts('TelegramBot thread is started.')
   while $processing
     begin
-      Telegram::Bot::Client.run(token) do |bot|
+      Telegram::Bot::Client.run(TEL_TOKEN) do |bot|
         bot.listen do |message|
           show_help = false
           case message
@@ -222,7 +222,7 @@ telegram_thread = Thread.new do
                     if res and res['ok']
                       afile = res['result']
                       file_path = afile['file_path']
-                      url = 'https://api.telegram.org/file/bot'+token+'/'+file_path
+                      url = 'https://api.telegram.org/file/bot'+TEL_TOKEN+'/'+file_path
                       http_response = get_http_response(url)
                       if http_response and http_response.body
                         ogg_data = http_response.body
