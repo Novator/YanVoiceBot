@@ -312,4 +312,5 @@ sleep(0.2)
 
 telegram_thread.exit if telegram_thread.alive?
 
+$log_file.close if $log_file
 
